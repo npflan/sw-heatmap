@@ -87,7 +87,7 @@ function changeColor(switchName, switchNum, Color) {
 
 $(document).ready(function() {
     window.setInterval(function() {
-      jData = $.parseJSON(httpGet("https://09177742.ngrok.io"));
+      jData = $.parseJSON(httpGet(window.location.origin+":8080"));
       console.log(jData);
       $.each(jData, function(i, item) {
         changeColor(jData[i].name, jData[i].num, "red");

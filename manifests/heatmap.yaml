@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sw-heatmap
+  labels:
+    app: sw-heatmap
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sw-heatmap
+  template:
+    metadata:
+      labels:
+        app: sw-heatmap
+    spec:
+      containers:
+      - name: static
+        image: registry.npf.dk/sw-heatmap-static:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+      - name: api
+        image: registry.npf.dk/sw-heatmap-go:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: {}
+  labels:
+    app: sw-heatmap
+  name: sw-heatmap
+spec:
+  clusterIP: 10.97.10.11
+  ports:
+  - name: http-static
+    port: 80
+    targetPort: 80
+  - name: http-api
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: sw-heatmap
