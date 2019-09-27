@@ -1,5 +1,35 @@
 function changeColor(switchName, switchNum, Color) {
   if (switchNum === 1) {
+    if (
+      (switchName >= "FA" && switchName <= "FS") ||
+      (switchName >= "GA" && switchName <= "GS")
+    ) {
+      $.merge(
+        $("#" + switchName + "01")
+          .parent()
+          .children(),
+        $("#" + switchName + "17")
+          .parent()
+          .children()
+      ).each((idx, seat) => {
+        $(seat)
+          .children("Rect")
+          .css("fill", Color);
+      });
+    } else if (switchName >= "CA" && switchName <= "CG") {
+      $.merge(
+        $("#" + switchName + "01")
+          .parent()
+          .children(),
+        $("#" + switchName + "30")
+          .parent()
+          .children()
+      ).each((idx, seat) => {
+        $(seat)
+          .children("Rect")
+          .css("fill", Color);
+      });
+    }
     $.merge(
       $("#" + switchName + "01")
         .parent()
@@ -38,10 +68,6 @@ function changeColor(switchName, switchNum, Color) {
   }
 }
 
-/*
-SwitchNum:
-
-*/
 $(document).ready(function() {
-  changeColor("AA", 1, "red");
+  changeColor("FQ", 1, "red");
 });
