@@ -47,7 +47,7 @@ var (
 )
 
 func (s *Service) getProm(w http.ResponseWriter, r *http.Request) {
-
+	logger.Info("Handling request")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	req, err := http.NewRequest("GET", promURL, nil)
 	if err != nil {
@@ -90,16 +90,17 @@ func (s *Service) getProm(w http.ResponseWriter, r *http.Request) {
 
 	respInfo := make([]SwitchInfo, 0)
 	for _, result := range promResp.Data.Results {
+		// If switch is not down move along.
 		if result.Value[1] == "1" {
 			continue
 		}
 
 		areaName := strings.Split(result.Metric.Instance, ".")[0]
-		splitString := s.SwitchRegexp.FindString(areaName)
-		if splitString == "" {
+		areaSplit := s.SwitchRegexp.FindString(areaName)
+		if areaSplit == "" {
 			continue
 		}
-		areaNum := strings.Split(areaName, splitString)[1]
+		areaNum := strings.Split(areaName, areaSplit)[1]
 		if areaNum == "" {
 			areaNum = "1"
 		}
@@ -113,7 +114,7 @@ func (s *Service) getProm(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var info SwitchInfo
-		info.Name = strings.ToUpper(splitString)
+		info.Name = strings.ToUpper(areaSplit)
 		info.Num = areaNumInt
 		respInfo = append(respInfo, info)
 	}
