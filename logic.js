@@ -6,6 +6,12 @@ function httpGet(theUrl) {
 }
 
 function changeColor(switchName, switchNum, Color) {
+  if (switchName.length >= 3) {
+    $("#" + switchName + switchNum)
+      .children("Rect")
+      .css("fill", Color);
+    return;
+  }
   if (
     (switchName >= "FA" && switchName <= "FS") ||
     (switchName >= "GA" && switchName <= "GS")
@@ -22,7 +28,8 @@ function changeColor(switchName, switchNum, Color) {
         .children("Rect")
         .css("fill", Color);
     });
-  } else if (switchName >= "CA" && switchName <= "CG") {
+    return;
+  } else if (switchName >= "CA" && switchName <= "CH") {
     $.merge(
       $("#" + switchName + "01")
         .parent()
@@ -35,10 +42,11 @@ function changeColor(switchName, switchNum, Color) {
         .children("Rect")
         .css("fill", Color);
     });
+    return;
   }
   if (switchNum === 1) {
     $.merge(
-      $("#" + switchName + "01")
+      $("#" + switchName + "03")
         .parent()
         .children(),
       $("#" + switchName + "34")
@@ -54,9 +62,10 @@ function changeColor(switchName, switchNum, Color) {
           .children("Rect")
           .css("fill", Color);
       });
+    return;
   } else {
     $.merge(
-      $("#" + switchName + "01")
+      $("#" + switchName + "03")
         .parent()
         .children(),
       $("#" + switchName + "34")
@@ -72,17 +81,16 @@ function changeColor(switchName, switchNum, Color) {
           .children("Rect")
           .css("fill", Color);
       });
+    return;
   }
 }
 
 $(document).ready(function() {
-  jData = $.parseJSON(httpGet("https://09177742.ngrok.io"));
-  console.log(jData);
-  //console.log(joebob);
-  //var jData = $.parseJSON(
-  //  '[{"name":"AA", "num":1},{"name":"AB", "num":2},{"name":"AC", "num":1},{"name":"AC", "num":2},{"name":"FA","num":1}]'
-  //);
-  $.each(jData, function(i, item) {
-    changeColor(jData[i].name, jData[i].num, "red");
-  });
+    window.setInterval(function() {
+      jData = $.parseJSON(httpGet("https://09177742.ngrok.io"));
+      console.log(jData);
+      $.each(jData, function(i, item) {
+        changeColor(jData[i].name, jData[i].num, "red");
+      });
+    }, 5000);
 });
