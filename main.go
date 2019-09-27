@@ -4,20 +4,36 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
 )
 
 type Service struct {
-	Client *http.Client
+	Client       *http.Client
+	SwitchRegexp *regexp.Regexp
+}
+
+type PromDataMetric struct {
+	Instance string `json:"instance"`
+}
+
+type PromDataResult struct {
+	Metric PromDataMetric `json:"metric"`
+	Value  []interface{}  `json:"value"`
+}
+
+type PromData struct {
+	ResultType string           `json:"resultType"`
+	Results    []PromDataResult `json:"result"`
 }
 
 type PromBody struct {
-	UserID int    `json:"userId"`
-	ID     int    `json:"id"`
-	Title  string `json:"title"`
-	Body   string `json:"body"`
+	Status string   `json:"status"`
+	Data   PromData `json:"data"`
 }
 
 type SwitchInfo struct {
@@ -26,7 +42,7 @@ type SwitchInfo struct {
 }
 
 var (
-	promURL = "https://jsonplaceholder.typicode.com/posts/1"
+	promURL = "http://10.97.10.10:9090/api/v1/query?query=probe_success"
 	logger  = zap.NewExample()
 )
 
@@ -72,19 +88,37 @@ func (s *Service) getProm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var info SwitchInfo
-	info.Name = "AA"
-	info.Num = 1
-	infoList := make([]SwitchInfo, 0, 0)
-	infoList = append(infoList, info)
-	info.Name = "AB"
-	info.Num = 1
-	infoList = append(infoList, info)
-	info.Name = "AA"
-	info.Num = 2
-	infoList = append(infoList, info)
+	respInfo := make([]SwitchInfo, 0, 0)
+	for _, result := range promResp.Data.Results {
+		if result.Value[1] == "1" {
+			continue
+		}
 
-	output, err := json.Marshal(infoList)
+		areaName := strings.Split(result.Metric.Instance, ".")[0]
+		splitString := s.SwitchRegexp.FindString(areaName)
+		if splitString == "" {
+			continue
+		}
+		areaNum := strings.Split(areaName, splitString)[1]
+		if areaNum == "" {
+			areaNum = "1"
+		}
+		areaNumInt, err := strconv.Atoi(areaNum)
+		if err != nil {
+			logger.Error(
+				"Failed to cast areaNum to int",
+				zap.Error(err),
+			)
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		var info SwitchInfo
+		info.Name = strings.ToUpper(splitString)
+		info.Num = areaNumInt
+		respInfo = append(respInfo, info)
+	}
+
+	output, err := json.Marshal(respInfo)
 	if err != nil {
 		logger.Error(
 			"Failed to create request",
@@ -114,9 +148,10 @@ func serve() error {
 		IdleConnTimeout: 30 * time.Second,
 	}
 	client := &http.Client{Transport: tr}
-
+	regex := regexp.MustCompile(`[a-zA-Z]{2,}`)
 	svc := Service{
-		Client: client,
+		Client:       client,
+		SwitchRegexp: regex,
 	}
 
 	http.HandleFunc("/", svc.getProm)
