@@ -88,7 +88,7 @@ func (s *Service) getProm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respInfo := make([]SwitchInfo, 0, 0)
+	respInfo := make([]SwitchInfo, 0)
 	for _, result := range promResp.Data.Results {
 		if result.Value[1] == "1" {
 			continue
@@ -139,7 +139,6 @@ func (s *Service) getProm(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	return
 }
 
 func serve() error {
