@@ -37,8 +37,9 @@ type PromBody struct {
 }
 
 type SwitchInfo struct {
-	Name string `json:"name"`
-	Num  int    `json:"num"`
+	Name  string `json:"name"`
+	Num   int    `json:"num"`
+	State int    `json:"state"`
 }
 
 var (
@@ -90,17 +91,13 @@ func (s *Service) getProm(w http.ResponseWriter, r *http.Request) {
 
 	respInfo := make([]SwitchInfo, 0)
 	for _, result := range promResp.Data.Results {
-		// If switch is not down move along.
-		if result.Value[1] == "1" {
-			continue
-		}
-
 		areaName := strings.Split(result.Metric.Instance, ".")[0]
 		areaSplit := s.SwitchRegexp.FindString(areaName)
 		if areaSplit == "" {
 			continue
 		}
 		areaNum := strings.Split(areaName, areaSplit)[1]
+		// Not all switches have numbers. Frontend expects a number so send 1 as default.
 		if areaNum == "" {
 			areaNum = "1"
 		}
@@ -113,9 +110,30 @@ func (s *Service) getProm(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), 500)
 			return
 		}
+
+		value, ok := result.Value[1].(string)
+		if !ok {
+			logger.Error(
+				"Failed to assert value to string",
+			)
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		intValue, err := strconv.Atoi(value)
+		if err != nil {
+			logger.Error(
+				"Failed to cast value to int",
+				zap.Error(err),
+			)
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
 		var info SwitchInfo
 		info.Name = strings.ToUpper(areaSplit)
 		info.Num = areaNumInt
+		info.State = intValue
 		respInfo = append(respInfo, info)
 	}
 
