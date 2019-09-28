@@ -2,6 +2,10 @@ function httpGet(theUrl) {
   var xmlHttp = new XMLHttpRequest();
   xmlHttp.open("GET", theUrl, false); // false for synchronous request
   xmlHttp.send(null);
+  if (xmlHttp.status != 200) {
+    console.log(xmlHttp.status);
+    return null;
+  }
   return xmlHttp.responseText;
 }
 
@@ -86,11 +90,27 @@ function changeColor(switchName, switchNum, Color) {
 }
 
 $(document).ready(function() {
-    window.setInterval(function() {
-      jData = $.parseJSON(httpGet(window.location.origin+":8080"));
+  window.setInterval(function() {
+    httpResp = httpGet(window.location.origin+"/api");
+    if (httpResp === null) {
+      $("#NamedSeats")
+        .children("g")
+        .children("g")
+        .each(function() {
+          $(this)
+            .children("Rect")
+            .css("fill", "yellow");
+        });
+    } else {
+      jData = $.parseJSON(httpResp);
       console.log(jData);
       $.each(jData, function(i, item) {
-        changeColor(jData[i].name, jData[i].num, "red");
+        var swState = "green";
+        if (jData[i].state === 0) {
+          swState = "red";
+        }
+        changeColor(jData[i].name, jData[i].num, swState);
       });
-    }, 5000);
+    }
+  }, 5000);
 });
