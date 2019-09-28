@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sw-heatmap
+  namespace: sw-heatmap
   labels:
     app: sw-heatmap
 spec:
@@ -33,6 +34,7 @@ metadata:
   labels:
     app: sw-heatmap
   name: sw-heatmap
+  namespace: sw-heatmap
 spec:
   clusterIP: 10.97.10.11
   ports:
