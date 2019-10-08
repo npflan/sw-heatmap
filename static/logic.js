@@ -9,89 +9,73 @@ function httpGet(theUrl) {
   return xmlHttp.responseText;
 }
 
+const switchMeta = {
+  isBasic: ({ id }) => {
+    const entry = getBasicEntry(id)
+    console.log(`Processing basic entry "${entry.name}"`)
+    doBasicProcessing(entry)
+  },
+  isCustom: ({ id }) => {
+    const entry = getCustomEntry(id)
+    console.log(`Processing custom entry "${entry.name}"`)
+    doCustomprocessing(entry)
+  },
+}
+
 function changeColor(switchName, switchNum, Color) {
-  if (switchName.length >= 3) {
-    $("#" + switchName + switchNum)
+  const crew = new Set(["CR", "SS", "CREW", "SCENE", "GAMECREW"]);
+  if (crew.has(switchName)) {
+    $(`#${switchName}${switchNum}`)
       .children("Rect")
       .css("fill", Color);
     return;
   }
+
+  var lower = 1, upper = 1
+  var splitFilter = (idx, seat) => {
+    return true
+  }
+
   if (
     (switchName >= "FA" && switchName <= "FS") ||
     (switchName >= "GA" && switchName <= "GS")
   ) {
-    $.merge(
-      $("#" + switchName + "01")
-        .parent()
-        .children(),
-      $("#" + switchName + "17")
-        .parent()
-        .children()
-    ).each((idx, seat) => {
-      $(seat)
-        .children("Rect")
-        .css("fill", Color);
-    });
-    return;
+    upper = 17; // gigabit seats
   } else if (switchName >= "CA" && switchName <= "CH") {
-    $.merge(
-      $("#" + switchName + "01")
-        .parent()
-        .children(),
-      $("#" + switchName + "30")
-        .parent()
-        .children()
-    ).each((idx, seat) => {
-      $(seat)
-        .children("Rect")
-        .css("fill", Color);
-    });
-    return;
-  }
-  if (switchNum === 1) {
-    $.merge(
-      $("#" + switchName + "03")
-        .parent()
-        .children(),
-      $("#" + switchName + "34")
-        .parent()
-        .children()
-    )
-      .filter((idx, seat) => {
+    upper = 30; 
+  } else { // normal case
+    lower = 3; // some tables don't have seat 1,2
+    upper = 34;
+    if (switchNum == 1) {
+      splitFilter = (idx, seat) => {
         let i = parseInt(seat.id.substr(2));
         return i < 11 || (i > 20 && i < 31);
-      })
-      .each((idx, seat) => {
-        $(seat)
-          .children("Rect")
-          .css("fill", Color);
-      });
-    return;
-  } else {
-    $.merge(
-      $("#" + switchName + "03")
-        .parent()
-        .children(),
-      $("#" + switchName + "34")
-        .parent()
-        .children()
-    )
-      .filter((idx, seat) => {
+      };
+    } else {
+      splitFilter = (idx, seat) => {
         let i = parseInt(seat.id.substr(2));
         return i > 30 || (i > 10 && i < 21);
-      })
-      .each((idx, seat) => {
-        $(seat)
-          .children("Rect")
-          .css("fill", Color);
-      });
-    return;
+      };
+    }
   }
+
+  sLower = lower.toString().padStart(2, "0");
+  sUpper = upper.toString().padStart(2, "0");
+  $.merge(
+    $(`#${switchName}${sLower}`).parent().children(),
+    $(`#${switchName}${sUpper}`).parent().children(),
+  )
+  .filter(splitFilter)
+  .each((idx, seat) => {
+    $(seat)
+      .children("Rect")
+      .css("fill", Color);
+  });
 }
 
 $(document).ready(function() {
   window.setInterval(function() {
-    httpResp = httpGet(window.location.origin+"/api");
+    httpResp = httpGet("http://sw-heatmap.sw-heatmap.svc.cluster.local/api");
     if (httpResp === null) {
       $("#NamedSeats")
         .children("g")
