@@ -9,19 +9,6 @@ function httpGet(theUrl) {
   return xmlHttp.responseText;
 }
 
-const switchMeta = {
-  isBasic: ({ id }) => {
-    const entry = getBasicEntry(id)
-    console.log(`Processing basic entry "${entry.name}"`)
-    doBasicProcessing(entry)
-  },
-  isCustom: ({ id }) => {
-    const entry = getCustomEntry(id)
-    console.log(`Processing custom entry "${entry.name}"`)
-    doCustomprocessing(entry)
-  },
-}
-
 function changeColor(switchName, switchNum, Color) {
   const crew = new Set(["CR", "SS", "CREW", "SCENE", "GAMECREW"]);
   if (crew.has(switchName)) {
@@ -75,7 +62,7 @@ function changeColor(switchName, switchNum, Color) {
 
 $(document).ready(function() {
   window.setInterval(function() {
-    httpResp = httpGet("http://sw-heatmap.sw-heatmap.svc.cluster.local/api");
+    httpResp = httpGet(window.location.origin+"/api");
     if (httpResp === null) {
       $("#NamedSeats")
         .children("g")
