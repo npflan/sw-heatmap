@@ -1,40 +1,21 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/api"
+	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
+
 	"go.uber.org/zap"
 )
-
-type Service struct {
-	Client       *http.Client
-	SwitchRegexp *regexp.Regexp
-}
-
-type PromDataMetric struct {
-	Instance string `json:"instance"`
-}
-
-type PromDataResult struct {
-	Metric PromDataMetric `json:"metric"`
-	Value  []interface{}  `json:"value"`
-}
-
-type PromData struct {
-	ResultType string           `json:"resultType"`
-	Results    []PromDataResult `json:"result"`
-}
-
-type PromBody struct {
-	Status string   `json:"status"`
-	Data   PromData `json:"data"`
-}
 
 type SwitchInfo struct {
 	Name  string `json:"name"`
@@ -43,137 +24,112 @@ type SwitchInfo struct {
 }
 
 var (
-	promURL = "http://10.97.10.10:9090/api/v1/query?query=probe_success"
+	promURL = "http://localhost:9090"
 	logger  = zap.NewExample()
 )
 
-func (s *Service) getProm(w http.ResponseWriter, r *http.Request) {
+func callPrometheus() (model.Vector, error) {
+	logger.Info("Querying")
+
+	client, err := api.NewClient(api.Config{
+		Address: promURL,
+	})
+	if err != nil {
+		logger.Error("Could not create client")
+	}
+	v1api := v1.NewAPI(client)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	result, _, err := v1api.Query(ctx, "probe_success", time.Now())
+	if err != nil {
+		logger.Error("Error querying Prometheus: %v\n", zap.Error(err))
+		return nil, err
+	}
+
+	switch result.Type() {
+	case model.ValVector:
+		modelVector := result.(model.Vector)
+		return modelVector, nil
+	default:
+		err := fmt.Errorf("unexpected value type %q", result.Type())
+		return nil, err
+	}
+}
+
+func parseMetric(vector model.Vector) []SwitchInfo {
 	logger.Info("Handling request")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	req, err := http.NewRequest("GET", promURL, nil)
-	if err != nil {
-		logger.Error(
-			"Failed to create request",
-			zap.Error(err),
-		)
-	}
+	switchNameRegex := regexp.MustCompile(`[a-zA-Z]{2,}`)
+	switchNumRegex := regexp.MustCompile(`[0-9]{1,}`)
+	switchesData := make([]SwitchInfo, 0)
 
-	resp, err := s.Client.Do(req)
-	if err != nil {
-		logger.Error(
-			"Failed to call prometheus",
-			zap.Error(err),
-		)
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		logger.Error(
-			"Failed to read prom response body",
-			zap.Error(err),
-		)
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	var promResp PromBody
-	err = json.Unmarshal(body, &promResp)
-	if err != nil {
-		logger.Error(
-			"Unmarshal json failed",
-			zap.Error(err),
-		)
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	respInfo := make([]SwitchInfo, 0)
-	for _, result := range promResp.Data.Results {
-		areaName := strings.Split(result.Metric.Instance, ".")[0]
-		areaSplit := s.SwitchRegexp.FindString(areaName)
-		if areaSplit == "" {
+	for _, sample := range vector {
+		instanceName := sample.Metric["instance"]
+		if !instanceName.IsValid() {
 			continue
 		}
-		areaNum := strings.Split(areaName, areaSplit)[1]
-		// Not all switches have numbers. Frontend expects a number so send 1 as default.
-		if areaNum == "" {
-			areaNum = "1"
+		instanceSplit := strings.Split(string(instanceName), ".")
+		if len(instanceSplit) == 0 {
+			continue
 		}
-		areaNumInt, err := strconv.Atoi(areaNum)
+
+		switchName := switchNameRegex.FindString(instanceSplit[0])
+		if switchName == "" {
+			continue
+		}
+
+		switchNum := switchNumRegex.FindString(instanceSplit[0])
+		if switchNum == "" {
+			switchNum = "1"
+		}
+		switchNumInt, err := strconv.Atoi(switchNum)
 		if err != nil {
-			logger.Error(
-				"Failed to cast areaNum to int",
-				zap.Error(err),
-			)
-			http.Error(w, err.Error(), 500)
-			return
+			continue
 		}
 
-		value, ok := result.Value[1].(string)
-		if !ok {
-			logger.Error(
-				"Failed to assert value to string",
-			)
-			http.Error(w, err.Error(), 500)
-			return
-		}
-
-		intValue, err := strconv.Atoi(value)
-		if err != nil {
-			logger.Error(
-				"Failed to cast value to int",
-				zap.Error(err),
-			)
-			http.Error(w, err.Error(), 500)
-			return
-		}
-
-		var info SwitchInfo
-		info.Name = strings.ToUpper(areaSplit)
-		info.Num = areaNumInt
-		info.State = intValue
-		respInfo = append(respInfo, info)
+		var switchData SwitchInfo
+		switchData.State = int(sample.Value)
+		switchData.Name = strings.ToUpper(switchName)
+		switchData.Num = switchNumInt
+		switchesData = append(switchesData, switchData)
 	}
+	return switchesData
+}
 
-	output, err := json.Marshal(respInfo)
+func writeSwitchData(w http.ResponseWriter, switchesData []SwitchInfo) error {
+	byteArr, err := json.Marshal(switchesData)
 	if err != nil {
-		logger.Error(
-			"Failed to create request",
-			zap.Error(err),
-		)
-		http.Error(w, err.Error(), 500)
-		return
+		logger.Error("Failed to create request", zap.Error(err))
+		return err
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(output)
-
+	_, err = w.Write(byteArr)
 	if err != nil {
-		logger.Error(
-			"Failed to write response",
-			zap.Error(err),
-		)
-		http.Error(w, err.Error(), 500)
+		logger.Error("Failed to write response", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+func handlePrometheusInteraction(w http.ResponseWriter, r *http.Request) {
+	vector, err := callPrometheus()
+	if err != nil {
+		logger.Error("Calling prometheus failed")
+		return
+	}
+
+	switchesData := parseMetric(vector)
+
+	err = writeSwitchData(w, switchesData)
+	if err != nil {
+		logger.Error("Writing switch data failed")
 		return
 	}
 }
 
 func serve() error {
-	tr := &http.Transport{
-		MaxIdleConns:    10,
-		IdleConnTimeout: 30 * time.Second,
-	}
-	client := &http.Client{Transport: tr}
-	regex := regexp.MustCompile(`[a-zA-Z]{2,}`)
-	svc := Service{
-		Client:       client,
-		SwitchRegexp: regex,
-	}
-
-	http.HandleFunc("/", svc.getProm)
-	logger.Info("Work work")
+	http.HandleFunc("/", handlePrometheusInteraction)
+	logger.Info("Starting to serve master...")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		return err
