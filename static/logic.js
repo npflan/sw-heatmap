@@ -24,15 +24,16 @@ function changeColor(switchName, switchNum, Color) {
   }
 
   if (
-    (switchName >= "FA" && switchName <= "FS") ||
-    (switchName >= "GA" && switchName <= "GS")
+    (switchName >= "FA" && switchName <= "FZ") ||
+    (switchName >= "GA" && switchName <= "GF") ||
+    (switchName >= "HA" && switchName <= "HM")
   ) {
-    upper = 17; // gigabit seats
+    upper = 20; // gigabit seats
   } else if (switchName >= "CA" && switchName <= "CH") {
     upper = 30; 
   } else { // normal case
-    lower = 3; // some tables don't have seat 1,2
-    upper = 34;
+    lower = 1; // some tables don't have seat 1,2
+    upper = 30;
     if (switchNum == 1) {
       splitFilter = (idx, seat) => {
         let i = parseInt(seat.id.substr(2));
