@@ -26,6 +26,11 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
+        env:
+          - name: "SW_HEATMAP_PROMETHEUS_URL"
+            value: "http://prom.npf"
+          - name: "SW_HEATMAP_METRICS_QUERY"
+            value: "probe_success"
 ---
 apiVersion: v1
 kind: Service

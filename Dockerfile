@@ -19,3 +19,9 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/promcall /promcall
 
 ENTRYPOINT [ "/promcall" ]
+
+# local 
+#   http://localhost:9090/
+#   probe_success
+ENV SW_HEATMAP_PROMETHEUS_URL=
+ENV SW_HEATMAP_METRICS_QUERY=

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -17,6 +18,10 @@ import (
 	"go.uber.org/zap"
 )
 
+type Specification struct {
+	PrometheusURL string `envconfig:"prometheus_url"`
+	MetricsQuery  string `envconfig:"metrics_query"`
+}
 type SwitchInfo struct {
 	Name  string `json:"name"`
 	Num   int    `json:"num"`
@@ -24,15 +29,14 @@ type SwitchInfo struct {
 }
 
 var (
-	promURL = "http://localhost:9090"
-	logger  = zap.NewExample()
+	logger = zap.NewExample()
 )
 
-func callPrometheus() (model.Vector, error) {
+func (s *Specification) callPrometheus() (model.Vector, error) {
 	logger.Info("Querying")
 
 	client, err := api.NewClient(api.Config{
-		Address: promURL,
+		Address: s.PrometheusURL,
 	})
 	if err != nil {
 		logger.Error("Could not create client")
@@ -111,8 +115,8 @@ func writeSwitchData(w http.ResponseWriter, switchesData []SwitchInfo) error {
 	return nil
 }
 
-func handlePrometheusInteraction(w http.ResponseWriter, r *http.Request) {
-	vector, err := callPrometheus()
+func (s *Specification) handlePrometheusInteraction(w http.ResponseWriter, r *http.Request) {
+	vector, err := s.callPrometheus()
 	if err != nil {
 		logger.Error("Calling prometheus failed")
 		return
@@ -127,8 +131,8 @@ func handlePrometheusInteraction(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func serve() error {
-	http.HandleFunc("/", handlePrometheusInteraction)
+func (s *Specification) serve() error {
+	http.HandleFunc("/", s.handlePrometheusInteraction)
 	logger.Info("Starting to serve master...")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
@@ -138,7 +142,16 @@ func serve() error {
 }
 
 func main() {
-	err := serve()
+
+	var s Specification
+	err := envconfig.Process("sw_heatmap", &s)
+	if err != nil {
+		panic(err)
+	}
+
+	logger.Info(fmt.Sprint("Proceeding with promURL: ", s.PrometheusURL, ", query: ", s.MetricsQuery))
+
+	err = s.serve()
 	if err != nil {
 		panic(err)
 	}
