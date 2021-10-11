@@ -63,6 +63,7 @@ func (s *Specification) callPrometheus() (model.Vector, error) {
 func parseMetric(vector model.Vector) []SwitchInfo {
 	logger.Info("Handling request")
 	switchNameRegex := regexp.MustCompile(`[a-zA-Z]{2,}`)
+	switchNameNumRegex := regexp.MustCompile(`[a-zA-Z]{2,}[0-9]{1,}`)
 	switchNumRegex := regexp.MustCompile(`[0-9]{1,}`)
 	switchesData := make([]SwitchInfo, 0)
 
@@ -81,7 +82,7 @@ func parseMetric(vector model.Vector) []SwitchInfo {
 			continue
 		}
 
-		switchNum := switchNumRegex.FindString(instanceSplit[0])
+		switchNum := switchNumRegex.FindString(switchNameNumRegex.FindString(instanceSplit[0]))
 		if switchNum == "" {
 			switchNum = "1"
 		}
@@ -95,6 +96,8 @@ func parseMetric(vector model.Vector) []SwitchInfo {
 		switchData.Name = strings.ToUpper(switchName)
 		switchData.Num = switchNumInt
 		switchesData = append(switchesData, switchData)
+
+		logger.Info(fmt.Sprint("SwitchData - Name: ", switchData.Name, ", Number: ", switchData.Num, ", State: ", switchData.State))
 	}
 	return switchesData
 }
