@@ -29,8 +29,9 @@ function changeColor(switchName, switchNum, Color) {
     (switchName >= "HA" && switchName <= "HM")
   ) {
     upper = 20; // gigabit seats
-  } else if (switchName >= "CREW1" && switchName <= "CREW15") {
-    switchName.replace("CREW", "C");
+  } else if (switchName === "CREW") {
+    switchName = switchName + switchNum;
+    lower = 1;
     upper = 24;
   } else if (switchName >= "CA" && switchName <= "CH") {
     upper = 30; 
@@ -52,6 +53,8 @@ function changeColor(switchName, switchNum, Color) {
 
   sLower = lower.toString().padStart(2, "0");
   sUpper = upper.toString().padStart(2, "0");
+
+  console.log(switchName + "" + sLower);
   $.merge(
     $(`#${switchName}${sLower}`).parent().children(),
     $(`#${switchName}${sUpper}`).parent().children(),
