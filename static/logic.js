@@ -10,7 +10,7 @@ function httpGet(theUrl) {
 }
 
 function changeColor(switchName, switchNum, Color) {
-  const crew = new Set(["CR", "SS", "CREW", "SCENE", "GAMECREW"]);
+  const crew = new Set(["CR", "SS", "SCENE", "GAMECREW"]);
   if (crew.has(switchName)) {
     $(`#${switchName}${switchNum}`)
       .children("Rect")
@@ -29,6 +29,9 @@ function changeColor(switchName, switchNum, Color) {
     (switchName >= "HA" && switchName <= "HM")
   ) {
     upper = 20; // gigabit seats
+  } else if (switchName >= "CREW1" && switchName <= "CREW15") {
+    switchName.replace("CREW", "C");
+    upper = 24;
   } else if (switchName >= "CA" && switchName <= "CH") {
     upper = 30; 
   } else { // normal case
