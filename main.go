@@ -23,9 +23,10 @@ type Specification struct {
 	MetricsQuery  string `envconfig:"metrics_query"`
 }
 type SwitchInfo struct {
-	Name  string `json:"name"`
-	Num   int    `json:"num"`
-	State int    `json:"state"`
+	Name    string `json:"name"`
+	SubName string `json:"subName"`
+	Num     int    `json:"num"`
+	State   int    `json:"state"`
 }
 
 var (
@@ -44,7 +45,7 @@ func (s *Specification) callPrometheus() (model.Vector, error) {
 	v1api := v1.NewAPI(client)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	result, _, err := v1api.Query(ctx, "probe_success", time.Now())
+	result, _, err := v1api.Query(ctx, s.MetricsQuery, time.Now())
 	if err != nil {
 		logger.Error("Error querying Prometheus: %v\n", zap.Error(err))
 		return nil, err
@@ -62,9 +63,9 @@ func (s *Specification) callPrometheus() (model.Vector, error) {
 
 func parseMetric(vector model.Vector) []SwitchInfo {
 	logger.Info("Handling request")
-	switchNameRegex := regexp.MustCompile(`[a-zA-Z]{2,}`)
-	switchNameNumRegex := regexp.MustCompile(`[a-zA-Z]{2,}[0-9]{1,}`)
-	switchNumRegex := regexp.MustCompile(`[0-9]{1,}`)
+	switchNameRegex := regexp.MustCompile(`[a-zA-Z]{2,}|[a-zA-Z0-9]{2,}[-$]`)
+	switchSubNameRegex := regexp.MustCompile(`[a-zA-Z]{1}[0-9]{1,}`)
+	switchNameNumRegex := regexp.MustCompile(`[a-zA-Z]{2,}[0-9]{1,}|[a-zA-Z0-9]{2,}[-$][0-9]{1,}`)
 	switchesData := make([]SwitchInfo, 0)
 
 	for _, sample := range vector {
@@ -82,7 +83,12 @@ func parseMetric(vector model.Vector) []SwitchInfo {
 			continue
 		}
 
-		switchNum := switchNumRegex.FindString(switchNameNumRegex.FindString(instanceSplit[0]))
+		switchSubName := ""
+		if len(instanceSplit) > 1 {
+			switchSubName = switchSubNameRegex.FindString(instanceSplit[1])
+		}
+
+		switchNum := strings.Replace(switchNameNumRegex.FindString(instanceSplit[0]), switchName, "", 1)
 		if switchNum == "" {
 			switchNum = "1"
 		}
@@ -94,10 +100,11 @@ func parseMetric(vector model.Vector) []SwitchInfo {
 		var switchData SwitchInfo
 		switchData.State = int(sample.Value)
 		switchData.Name = strings.ToUpper(switchName)
+		switchData.SubName = strings.ToUpper(switchSubName)
 		switchData.Num = switchNumInt
 		switchesData = append(switchesData, switchData)
 
-		logger.Info(fmt.Sprint("SwitchData - Name: ", switchData.Name, ", Number: ", switchData.Num, ", State: ", switchData.State))
+		logger.Info(fmt.Sprint("SwitchData - Name: ", switchData.Name, ", SubName: ", switchData.SubName, ", Number: ", switchData.Num, ", State: ", switchData.State))
 	}
 	return switchesData
 }

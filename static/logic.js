@@ -9,19 +9,24 @@ function httpGet(theUrl) {
   return xmlHttp.responseText;
 }
 
-function changeColor(switchName, switchNum, Color) {
-  const crew = new Set(["CR", "SS", "SCENE", "GAMECREW"]);
-  if (crew.has(switchName)) {
-    $(`#${switchName}${switchNum}`)
+function changeColor(switchName, switchSubName, switchNum, Color) {
+
+  const isOtherCrew = (switchName === "CREW" && switchSubName === "E3") || (switchName === "CC" && (switchSubName === "D10" || switchSubName === "D11"))
+  const isExpo = switchName === "EXPO"
+  const isScene = switchName === "SCENE"
+  const isShop = switchName === "SHOP"
+  const isCr = switchName === "CR"
+  const isSoS = switchName === "SOS"
+  const isE1 = switchName === "E1"
+  const isBillet = switchName === "BILLET"
+  if (isOtherCrew || isExpo || isScene || isShop || isCr || isSoS || isE1 || isBillet) {
+    $(`#${switchName}${switchNum}${switchSubName}`)
       .children("Rect")
       .css("fill", Color);
     return;
   }
 
   var lower = 1, upper = 1
-  var splitFilter = (idx, seat) => {
-    return true
-  }
 
   if (
     (switchName >= "FA" && switchName <= "FZ") ||
@@ -30,7 +35,7 @@ function changeColor(switchName, switchNum, Color) {
   ) {
     upper = 20; // gigabit seats
   } else if (switchName === "CREW") {
-    switchName = switchName + switchNum;
+    switchName = switchName + switchNum + switchSubName;
     lower = 1;
     upper = 24;
   } else if (switchName >= "CA" && switchName <= "CH") {
@@ -87,7 +92,7 @@ $(document).ready(function() {
         if (jData[i].state === 0) {
           swState = "red";
         }
-        changeColor(jData[i].name, jData[i].num, swState);
+        changeColor(jData[i].name, jData[i].switchSubName || "", jData[i].num, swState);
       });
     }
   }, 5000);
