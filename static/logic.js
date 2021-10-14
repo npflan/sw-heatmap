@@ -19,7 +19,7 @@ function changeColor(switchName, switchSubName, switchNum, Color) {
   const isShop = switchName === "SHOP"
   const isCr = switchName === "CR"
   const isSoS = switchName === "SOS"
-  const isE1 = switchName === "E1"
+  const isE1 = switchName === "E1-"
   const isBillet = switchName === "BILLET"
   if (isOtherCrew || isExpo || isScene || isShop || isCr || isSoS || isE1 || isBillet) {
     $(`#${switchName}${switchNum}${switchSubName}`)
@@ -63,7 +63,7 @@ function changeColor(switchName, switchSubName, switchNum, Color) {
   sLower = lower.toString().padStart(2, "0");
   sUpper = upper.toString().padStart(2, "0");
 
-  //console.log(switchName + "" + sLower);
+  console.log(switchName + "" + sLower);
   $.merge(
     $(`#${switchName}${sLower}`).parent().children(),
     $(`#${switchName}${sUpper}`).parent().children(),
