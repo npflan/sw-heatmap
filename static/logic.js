@@ -25,8 +25,10 @@ function changeColor(switchName, switchSubName, switchNum, Color) {
       .css("fill", Color);
     return;
   }
-
   var lower = 1, upper = 1
+  var splitFilter = (idx, seat) => {
+    return true
+  }
 
   if (
     (switchName >= "FA" && switchName <= "FZ") ||
