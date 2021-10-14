@@ -11,6 +11,8 @@ function httpGet(theUrl) {
 
 function changeColor(switchName, switchSubName, switchNum, Color) {
 
+  //console.log(switchName + "- " + switchSubName + " " + switchNum + " " + Color);
+
   const isOtherCrew = (switchName === "CREW" && switchSubName === "E3") || (switchName === "CC" && (switchSubName === "D10" || switchSubName === "D11"))
   const isExpo = switchName === "EXPO"
   const isScene = switchName === "SCENE"
@@ -61,7 +63,7 @@ function changeColor(switchName, switchSubName, switchNum, Color) {
   sLower = lower.toString().padStart(2, "0");
   sUpper = upper.toString().padStart(2, "0");
 
-  console.log(switchName + "" + sLower);
+  //console.log(switchName + "" + sLower);
   $.merge(
     $(`#${switchName}${sLower}`).parent().children(),
     $(`#${switchName}${sUpper}`).parent().children(),
@@ -94,7 +96,7 @@ $(document).ready(function() {
         if (jData[i].state === 0) {
           swState = "red";
         }
-        changeColor(jData[i].name, jData[i].switchSubName || "", jData[i].num, swState);
+        changeColor(jData[i].name, jData[i].subName ?? "", jData[i].num, swState);
       });
     }
   }, 5000);
