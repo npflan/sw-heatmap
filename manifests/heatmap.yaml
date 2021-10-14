@@ -17,12 +17,12 @@ spec:
     spec:
       containers:
       - name: static
-        image: registry.npf.dk/sw-heatmap-static:v2
+        image: registry.npf.dk/sw-heatmap-static:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80
       - name: api
-        image: registry.npf.dk/sw-heatmap-go:v2
+        image: registry.npf.dk/sw-heatmap-go:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
