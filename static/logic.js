@@ -13,7 +13,7 @@ function changeColor(switchName, switchSubName, switchNum, Color) {
 
   //console.log(switchName + "- " + switchSubName + " " + switchNum + " " + Color);
 
-  const isOtherCrew = (switchName === "CREW" && switchSubName === "E1") || (switchName === "CC" && (switchSubName === "D10" || switchSubName === "D11"))
+  const isOtherCrew = (switchName === "CREW" && (switchSubName === "E1" || switchSubName === "E3")) || (switchName === "CC" && (switchSubName === "D10" || switchSubName === "D11"))
   const isExpo = switchName === "EXPO"
   const isScene = switchName === "SCENE"
   const isShop = switchName === "SHOP"
