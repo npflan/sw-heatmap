@@ -8,6 +8,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME_STATIC: ${{ github.repository }}-static
 
 jobs:
   build:
@@ -22,16 +23,31 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata (tags, labels) for Docker
+    - name: Extract metadata (tags, labels) for Docker (sw-heatmap)
       id: meta
       uses: docker/metadata-action@v4
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-    - name: Build and push Docker image
+    - name: Extract metadata (tags, labels) for Docker (sw-heatmap-static)
+      id: meta-static
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_STATIC }}
+
+    - name: Build and push Docker image (sw-heatmap)
       uses: docker/build-push-action@v3
       with:
         context: .
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        
+    - name: Build and push Docker image (sw-heatmap-static)
+      uses: docker/build-push-action@v3
+      with:
+        context: .
+        file: static-Dockerfile
+        push: true
+        tags: ${{ steps.meta-static.outputs.tags }}
+        labels: ${{ steps.meta-static.outputs.labels }}
